@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from py_gearworks import *
-from ocp_vscode import show, set_port
+from ocp_vscode import show, set_port, reset_show, Camera
 import time
 import logging
 from build123d import *
@@ -179,14 +179,14 @@ def worm_approx():
 def planetary_helical_gear():
     m = 2
 
-    n_ring = 97
-    n_sun = 11
+    n_ring = 64
+    n_sun = 32
     n_planet = int(np.floor((n_ring - n_sun) / 2))
 
     beta = 15 * PI / 180
     herringbone = True
 
-    height = 15
+    height = 30
     # this hacky correction needs a better treatment later
     angle_correction = PI / n_ring * ((n_planet + 1) % 2)
 
@@ -236,6 +236,87 @@ def planetary_helical_gear():
     gear_sun_cad = gear_sun.build_part()
     gear_ring_cad = gear_ring.build_part()
     print(f"gear build time: {time.time()-start}")
+
+    return (
+        gear_ring_cad,
+        gear_sun_cad,
+        gear_planet1_cad,
+        gear_planet2_cad,
+        gear_planet3_cad,
+    )
+
+
+def planetary_helical_Gemini():
+    # --- 1. Gear Parameter Definitions ---
+    m = 2                             # Module
+    n_ring = 64                       # Ring gear teeth
+    n_sun = 32                        # Sun gear teeth
+    n_planet = (n_ring - n_sun) // 2  # Number of planet teeth (16)
+    
+    beta = np.radians(45)             # Set helix angle to 45 degrees
+    herringbone = True
+    height = 30                       
+
+    # --- 2. Phase Correction & Alignment ---
+    angle_correction = (np.pi / n_ring) * ((n_planet + 1) % 2)
+
+    # --- 3. Gear Instantiation ---
+    gear_ring = HelicalRingGear(
+        number_of_teeth=n_ring,
+        module=m,
+        height=height,
+        helix_angle=beta,
+        angle=angle_correction,
+        herringbone=herringbone,
+    )
+    
+    gear_sun = HelicalGear(
+        number_of_teeth=n_sun,
+        module=m,
+        height=height,
+        helix_angle=-beta,
+        herringbone=herringbone,
+    )
+    
+    # Instantiating independent planet objects so their unique 
+    # local coordinate systems are preserved for the animator
+    gear_planet1 = HelicalGear(
+        number_of_teeth=n_planet,
+        module=m,
+        height=height,
+        helix_angle=beta,
+        herringbone=herringbone,
+    )
+    gear_planet2 = gear_planet1.copy()
+    gear_planet3 = gear_planet1.copy()
+
+    # --- 4. Planet Placement Vector Calculations ---
+    angle2 = root(lambda x: (x * n_sun + x * n_ring) % 1, 1.0 / 3).x[0] * 2 * np.pi
+    angle3 = root(lambda x: (x * n_sun + x * n_ring) % 1, 2.0 / 3).x[0] * 2 * np.pi
+    
+    dir1 = RIGHT
+    dir2 = rotate_vector(RIGHT, angle2)
+    dir3 = rotate_vector(RIGHT, angle3)
+
+    # --- 5. Individual Alignment & Compilation ---
+    # mesh_to calculates the EXACT position and unique tooth clocking 
+    # required to mesh with the fixed sun gear teeth at these positions.
+    gear_planet1.mesh_to(gear_sun, target_dir=dir1)
+    gear_planet2.mesh_to(gear_sun, target_dir=dir2)
+    gear_planet3.mesh_to(gear_sun, target_dir=dir3)
+
+    start = time.time()
+    
+    # Compile each CAD part cleanly. This takes an extra second or two,
+    # but guarantees the local axes match what the animation pipeline expects.
+    gear_planet1_cad = gear_planet1.build_part()
+    gear_planet2_cad = gear_planet2.build_part()
+    gear_planet3_cad = gear_planet3.build_part()
+    
+    gear_sun_cad = gear_sun.build_part()
+    gear_ring_cad = gear_ring.build_part()
+    
+    print(f"Perfect gear build time: {time.time() - start:.4f} seconds")
 
     return (
         gear_ring_cad,
@@ -478,4 +559,4 @@ if __name__ == "__main__":
     set_port(3939)
     # default deviation is 0.1, default angular tolerance is 0.2.
     # Lower values result in higher resulution.
-    show(spur_gears(), deviation=0.05, angular_tolerance=0.1)
+    show(planetary_helical_Gemini(), deviation=0.05, angular_tolerance=0.1, reset_camera=Camera.RESET)
