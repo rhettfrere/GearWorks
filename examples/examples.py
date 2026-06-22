@@ -255,7 +255,7 @@ def planetary_helical_Gemini():
     
     beta = np.radians(45)             # Set helix angle to 45 degrees
     herringbone = True
-    height = 30                       
+    height = 50                       
 
     # --- 2. Phase Correction & Alignment ---
     angle_correction = (np.pi / n_ring) * ((n_planet + 1) % 2)
@@ -268,6 +268,7 @@ def planetary_helical_Gemini():
         helix_angle=beta,
         angle=angle_correction,
         herringbone=herringbone,
+        profile_shift=0,
     )
     
     gear_sun = HelicalGear(
@@ -276,6 +277,7 @@ def planetary_helical_Gemini():
         height=height,
         helix_angle=-beta,
         herringbone=herringbone,
+        profile_shift=0,
     )
     
     # Instantiating independent planet objects so their unique 
@@ -286,6 +288,7 @@ def planetary_helical_Gemini():
         height=height,
         helix_angle=beta,
         herringbone=herringbone,
+        profile_shift=0,
     )
     gear_planet2 = gear_planet1.copy()
     gear_planet3 = gear_planet1.copy()
@@ -326,6 +329,7 @@ def planetary_helical_Gemini():
         gear_planet3_cad,
     )
 
+    print(f"{gear_ring.pitch_radius}")
 
 def bevel_gear():
 
